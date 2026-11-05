@@ -30,10 +30,28 @@ Anyone holding your locked phone can use these. Leave them off if that matters t
 
 ## Terminal
 
-Building needs JDK 21 and the Android SDK.
+On Arch-based systems, install it from the signed pacman repository. First trust the signing key
+and check that its fingerprint is `D44D20B1293F73F552732FE18DB82A66F7D813D4`:
+
+    curl -fsSL https://raw.githubusercontent.com/Daliborlol/mobilus-blinds/main/packaging/signing-key.asc | sudo pacman-key --add -
+    sudo pacman-key --lsign-key D44D20B1293F73F552732FE18DB82A66F7D813D4
+
+Then add this to `/etc/pacman.conf`:
+
+    [blinds]
+    SigLevel = Required DatabaseRequired
+    Server = https://github.com/Daliborlol/mobilus-blinds/releases/latest/download
+
+And install it. Updates then arrive with your normal `pacman -Syu`:
+
+    sudo pacman -Syu blinds
+
+To build it yourself instead, you need JDK 21 and the Android SDK:
 
     ./gradlew :cli:installDist
     ln -s "$PWD/cli/build/install/blinds/bin/blinds" ~/.local/bin/blinds
+
+Then:
 
     blinds login 192.168.1.50 admin
     blinds list
@@ -61,9 +79,10 @@ by you.
     ./gradlew :app:assembleRelease
     tools/fake_gateway.py
 
-Pushing a `v*` tag builds a signed APK and publishes it as a GitHub release. The workflow needs the
-`KEYSTORE_BASE64` and `KEYSTORE_PASSWORD` repository secrets, holding a PKCS12 keystore with a key
-called `blinds`.
+Pushing a `v*` tag builds a signed APK and pacman repository and publishes them as a GitHub release.
+The workflow needs three repository secrets: `KEYSTORE_BASE64` and `KEYSTORE_PASSWORD`, holding a
+PKCS12 keystore with a key called `blinds`, and `PACMAN_GPG_KEY`, holding the armored private key
+that matches `packaging/signing-key.asc`.
 
 The fake gateway stands in for the hardware. Log in as `admin` / `secret`, using `127.0.0.1` from
 this machine or `10.0.2.2` from an emulator (add `--bind 0.0.0.0` for a real phone). It's written

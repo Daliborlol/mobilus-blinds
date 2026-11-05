@@ -34,7 +34,26 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           VERSION_NAME: ${{ github.ref_name }}
           VERSION_CODE: ${{ github.run_number }}
-        run: ./gradlew test :app:assembleRelease
+        run: ./gradlew test :app:assembleRelease :cli:distTar
+
+      # makepkg refuses to run as root, so the container builds as an ordinary user.
+      - name: Build signed pacman repository
+        env:
+          PACMAN_GPG_KEY: ${{ secrets.PACMAN_GPG_KEY }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          test -n "$PACMAN_GPG_KEY"
+          mkdir dist
+          chmod 777 dist
+          docker run --rm -e PACMAN_GPG_KEY -e TAG -v "$PWD:/src" -w /src archlinux:latest bash -euc '
+            pacman -Syu --noconfirm --needed base-devel
+            useradd -m builder
+            runuser -u builder -- env HOME=/home/builder bash -euc "
+              printf %s \"\$PACMAN_GPG_KEY\" | gpg --batch --import
+              unset PACMAN_GPG_KEY
+              packaging/build-repo.sh \"\${TAG#v}\" cli/build/distributions/blinds.tar dist
+            "
+          '
 
       - name: Publish release
         env:
@@ -42,4 +61,4 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           mv app/build/outputs/apk/release/app-release.apk "blinds-$TAG.apk"
-          gh release create "$TAG" "blinds-$TAG.apk" --title "$TAG" --generate-notes
+          gh release create "$TAG" "blinds-$TAG.apk" dist/* --title "$TAG" --generate-notes

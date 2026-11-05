@@ -1,0 +1,18 @@
+pkgname=blinds
+# build-repo.sh replaces this with the release version.
+pkgver=0
+pkgrel=1
+pkgdesc='Control Mobilus blinds through a COSMO GTW gateway on your local network'
+arch=('any')
+url='https://github.com/Daliborlol/mobilus-blinds'
+license=('unknown')
+depends=('java-runtime-headless>=17')
+source=('blinds.tar')
+sha256sums=('SKIP')
+
+package() {
+    install -d "$pkgdir/usr/share" "$pkgdir/usr/bin"
+    cp -r "$srcdir/blinds" "$pkgdir/usr/share/blinds"
+    rm -f "$pkgdir/usr/share/blinds/bin/blinds.bat"
+    ln -s /usr/share/blinds/bin/blinds "$pkgdir/usr/bin/blinds"
+}
