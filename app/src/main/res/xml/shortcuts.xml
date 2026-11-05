@@ -1,0 +1,11 @@
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="up" android:enabled="true" android:icon="@drawable/ic_up" android:shortcutShortLabel="@string/tile_up">
+        <intent android:action="dev.dalibor.blinds.UP" android:targetPackage="dev.dalibor.blinds" android:targetClass="dev.dalibor.blinds.ShortcutActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="stop" android:enabled="true" android:icon="@drawable/ic_stop" android:shortcutShortLabel="@string/tile_stop">
+        <intent android:action="dev.dalibor.blinds.STOP" android:targetPackage="dev.dalibor.blinds" android:targetClass="dev.dalibor.blinds.ShortcutActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="down" android:enabled="true" android:icon="@drawable/ic_down" android:shortcutShortLabel="@string/tile_down">
+        <intent android:action="dev.dalibor.blinds.DOWN" android:targetPackage="dev.dalibor.blinds" android:targetClass="dev.dalibor.blinds.ShortcutActivity" />
+    </shortcut>
+</shortcuts>
