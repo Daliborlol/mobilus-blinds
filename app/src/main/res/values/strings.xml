@@ -1,11 +1,12 @@
 <resources>
     <string name="app_name">Blinds</string>
-    <string name="widget_description">Open, stop or close one blind or all of them</string>
+    <string name="widget_description">Open, stop or close one blind</string>
     <string name="all_blinds">All blinds</string>
+    <string name="one_blind">Blind</string>
     <string name="up">Open</string>
     <string name="stop">Stop</string>
     <string name="down">Close</string>
-    <string name="tile_up">Open blinds</string>
-    <string name="tile_stop">Stop blinds</string>
-    <string name="tile_down">Close blinds</string>
+    <string name="tile_up">Open blind</string>
+    <string name="tile_stop">Stop blind</string>
+    <string name="tile_down">Close blind</string>
 </resources>

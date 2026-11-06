@@ -12,15 +12,17 @@
     <TextView
         android:id="@+id/title"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:ellipsize="end"
         android:gravity="center"
         android:maxLines="1"
-        android:text="@string/all_blinds"
+        android:text="@string/one_blind"
         android:textColor="@color/widget_fg"
         android:textSize="13sp" />
 
     <LinearLayout
+        android:id="@+id/buttons"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"

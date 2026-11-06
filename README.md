@@ -16,7 +16,10 @@ Requires Android 11 or newer. The login screen searches your Wi-Fi network for t
 in its address, or you can type it. Then log in with the user you created on the gateway.
 Give the gateway a fixed IP in your router, or the app will lose it when the address changes.
 
-Ways to control the blinds without opening the app:
+Everything below controls one blind. Pick it under "Blind to control" in the app's settings; each
+widget can have its own, and you choose the Device Controls you want when you add them.
+
+Ways to control a blind without opening the app:
 
 | Where | How to add it | On the lock screen? |
 | --- | --- | --- |

@@ -18,7 +18,9 @@ import android.net.Uri
 import android.os.Bundle
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
+import android.view.View
 import android.widget.RemoteViews
+import android.widget.Toast
 import dev.dalibor.blinds.gateway.Command
 import kotlinx.coroutines.launch
 
@@ -72,18 +74,34 @@ class BlindWidget : AppWidgetProvider() {
 
         fun update(context: Context, manager: AppWidgetManager, widgetId: Int) {
             val blinds = context.blindsApp.blinds
-            val target = blinds.store.widgetTarget(widgetId)
-            val name = blinds.name(target, context.getString(R.string.all_blinds)) ?: "Blind removed"
-            val status = blinds.snapshot.value.status[target]
+            val snapshot = blinds.snapshot.value
+            val target = blinds.store.widgetTarget(widgetId) ?: snapshot.mainBlind
+            val device = snapshot.blinds.firstOrNull { it.id == target }
             val views = RemoteViews(context.packageName, R.layout.widget_blind).apply {
-                setTextViewText(R.id.title, status ?: name)
-                setOnClickPendingIntent(R.id.up, CommandReceiver.pendingIntent(context, target, Command.Up))
-                setOnClickPendingIntent(R.id.stop, CommandReceiver.pendingIntent(context, target, Command.Stop))
-                setOnClickPendingIntent(R.id.down, CommandReceiver.pendingIntent(context, target, Command.Down))
-                setOnClickPendingIntent(R.id.title, openAppIntent(context))
+                if (device == null) {
+                    setTextViewText(R.id.title, "Tap to choose a blind")
+                    setViewVisibility(R.id.buttons, View.GONE)
+                    setOnClickPendingIntent(R.id.title, chooseBlindIntent(context, widgetId))
+                } else {
+                    setTextViewText(R.id.title, snapshot.status[device.id] ?: device.name)
+                    setViewVisibility(R.id.buttons, View.VISIBLE)
+                    setOnClickPendingIntent(R.id.up, CommandReceiver.pendingIntent(context, device.id, Command.Up))
+                    setOnClickPendingIntent(R.id.stop, CommandReceiver.pendingIntent(context, device.id, Command.Stop))
+                    setOnClickPendingIntent(R.id.down, CommandReceiver.pendingIntent(context, device.id, Command.Down))
+                    setOnClickPendingIntent(R.id.title, openAppIntent(context))
+                }
             }
             manager.updateAppWidget(widgetId, views)
         }
+
+        /** For launchers that skip the picker when placing a widget, and for removed blinds. */
+        private fun chooseBlindIntent(context: Context, widgetId: Int) = PendingIntent.getActivity(
+            context,
+            widgetId,
+            Intent(context, WidgetConfigActivity::class.java)
+                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
     }
 }
 
@@ -92,15 +110,16 @@ abstract class CommandTile(private val command: Command) : TileService() {
     override fun onStartListening() = show(null)
 
     override fun onClick() {
-        show("Sending…")
         val app = blindsApp
-        app.scope.launch { show(app.blinds.send(ALL_BLINDS, command) ?: "Done") }
+        val device = app.blinds.snapshot.value.main ?: return show(null)
+        show("Sending…")
+        app.scope.launch { show(app.blinds.send(device.id, command) ?: "Done") }
     }
 
     private fun show(subtitle: String?) {
         val tile = qsTile ?: return
         tile.state = Tile.STATE_INACTIVE
-        tile.subtitle = subtitle
+        tile.subtitle = subtitle ?: blindsApp.blinds.snapshot.value.main?.name ?: "Choose a blind in the app"
         tile.updateTile()
     }
 }
@@ -116,7 +135,12 @@ class ShortcutActivity : Activity() {
         val command = Command(intent.action.orEmpty().substringAfterLast('.'))
         if (command == Command.Up || command == Command.Stop || command == Command.Down) {
             val app = blindsApp
-            app.scope.launch { app.blinds.send(ALL_BLINDS, command) }
+            val device = app.blinds.snapshot.value.main
+            if (device == null) {
+                Toast.makeText(app, "Choose a blind in the app's settings", Toast.LENGTH_LONG).show()
+            } else {
+                app.scope.launch { app.blinds.send(device.id, command) }
+            }
         }
         finish()
     }
@@ -150,24 +174,32 @@ object LockScreenNotification {
         }
         manager.createNotificationChannel(channel)
 
-        fun action(icon: Int, label: Int, command: Command) = Notification.Action.Builder(
-            Icon.createWithResource(context, icon),
-            context.getString(label),
-            CommandReceiver.pendingIntent(context, ALL_BLINDS, command),
-        ).build()
+        val device = snapshot.main
+
+        fun Notification.Builder.addCommand(icon: Int, label: Int, target: Long, command: Command) = addAction(
+            Notification.Action.Builder(
+                Icon.createWithResource(context, icon),
+                context.getString(label),
+                CommandReceiver.pendingIntent(context, target, command),
+            ).build(),
+        )
 
         val notification = Notification.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_blinds)
-            .setContentTitle(context.getString(R.string.all_blinds))
-            .setContentText(snapshot.status[ALL_BLINDS])
+            .setContentTitle(device?.name ?: "Choose a blind")
+            .setContentText(if (device == null) "Open Settings in the app" else snapshot.status[device.id])
             .setContentIntent(openAppIntent(context))
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
-            .addAction(action(R.drawable.ic_up, R.string.up, Command.Up))
-            .addAction(action(R.drawable.ic_stop, R.string.stop, Command.Stop))
-            .addAction(action(R.drawable.ic_down, R.string.down, Command.Down))
+            .apply {
+                if (device != null) {
+                    addCommand(R.drawable.ic_up, R.string.up, device.id, Command.Up)
+                    addCommand(R.drawable.ic_stop, R.string.stop, device.id, Command.Stop)
+                    addCommand(R.drawable.ic_down, R.string.down, device.id, Command.Down)
+                }
+            }
             .build()
         manager.notify(ID, notification)
     }

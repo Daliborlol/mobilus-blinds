@@ -41,6 +41,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
@@ -292,6 +293,7 @@ private fun CommandButton(icon: Int, label: Int, onClick: () -> Unit) {
 @Composable
 private fun SettingsScreen(blinds: Blinds, close: () -> Unit) {
     val context = LocalContext.current
+    val snapshot by blinds.snapshot.collectAsState()
     var notification by remember { mutableStateOf(blinds.store.notificationEnabled) }
 
     fun setNotification(enabled: Boolean) {
@@ -317,6 +319,24 @@ private fun SettingsScreen(blinds: Blinds, close: () -> Unit) {
             Modifier.padding(padding).padding(16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            Text("Blind to control", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Used by the notification, Quick Settings tiles and launcher shortcuts.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            if (snapshot.blinds.isEmpty()) Text("No blinds found yet.")
+            snapshot.blinds.forEach { device ->
+                Row(
+                    Modifier.fillMaxWidth().clickable { blinds.chooseMainBlind(device.id) },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(selected = device.id == snapshot.mainBlind, onClick = null)
+                    Spacer(Modifier.width(12.dp))
+                    Text(device.name, Modifier.padding(vertical = 8.dp))
+                }
+            }
+
+            HorizontalDivider()
             Text("Lock screen", style = MaterialTheme.typography.titleMedium)
             Row(
                 Modifier.fillMaxWidth().clickable {
@@ -356,7 +376,8 @@ private fun SettingsScreen(blinds: Blinds, close: () -> Unit) {
             Text("Widget", style = MaterialTheme.typography.titleMedium)
             Text(
                 "Goes on the home screen, and on the lock screen on phones that allow widgets there. " +
-                    "Long-press a widget to choose which blind it controls.",
+                    "Each widget controls one blind. Added from here, it starts on the blind chosen above. " +
+                    "Long-press it to change which.",
                 style = MaterialTheme.typography.bodySmall,
             )
             OutlinedButton(onClick = {
@@ -367,8 +388,8 @@ private fun SettingsScreen(blinds: Blinds, close: () -> Unit) {
             HorizontalDivider()
             Text("Device Controls", style = MaterialTheme.typography.titleMedium)
             Text(
-                "Add the Device Controls tile to Quick Settings and pick Blinds to get a control for each " +
-                    "blind. To use them while locked, turn on \"Control from locked device\" in your " +
+                "Add the Device Controls tile to Quick Settings, pick Blinds, and choose the controls " +
+                    "you want. To use them while locked, turn on \"Control from locked device\" in your " +
                     "phone's lock screen settings.",
                 style = MaterialTheme.typography.bodySmall,
             )
@@ -421,14 +442,13 @@ class WidgetConfigActivity : ComponentActivity() {
                     LazyColumn(Modifier.padding(padding).fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
                         item {
                             Text(
-                                "Choose what this widget controls",
+                                "Choose the blind this widget controls",
                                 style = MaterialTheme.typography.titleMedium,
                                 modifier = Modifier.padding(bottom = 8.dp),
                             )
-                            Text(
-                                stringResource(R.string.all_blinds),
-                                Modifier.fillMaxWidth().clickable { choose(ALL_BLINDS) }.padding(vertical = 16.dp),
-                            )
+                            if (snapshot.blinds.isEmpty()) {
+                                Text("No blinds found yet. Open the app and log in first.")
+                            }
                         }
                         items(snapshot.blinds, key = { it.id }) { device ->
                             Text(

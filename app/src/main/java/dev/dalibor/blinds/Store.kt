@@ -80,7 +80,17 @@ class Store(context: Context) {
         get() = prefs.getBoolean("notification", false)
         set(value) = prefs.edit { putBoolean("notification", value) }
 
-    fun widgetTarget(widgetId: Int): Long = prefs.getLong("widget_$widgetId", ALL_BLINDS)
+    /** The blind that the tiles, the notification and the launcher shortcuts control. */
+    var mainBlind: Long?
+        get() = prefs.getLong("main_blind", ALL_BLINDS).takeUnless { it == ALL_BLINDS }
+        set(value) = prefs.edit {
+            if (value == null) remove("main_blind") else putLong("main_blind", value)
+        }
+
+    /** Null when the widget hasn't picked a blind. Older versions could save "all blinds" here. */
+    fun widgetTarget(widgetId: Int): Long? =
+        prefs.getLong("widget_$widgetId", ALL_BLINDS).takeUnless { it == ALL_BLINDS }
+
     fun setWidgetTarget(widgetId: Int, target: Long) = prefs.edit { putLong("widget_$widgetId", target) }
     fun removeWidget(widgetId: Int) = prefs.edit { remove("widget_$widgetId") }
 

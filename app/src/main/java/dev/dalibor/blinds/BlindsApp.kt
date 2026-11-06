@@ -27,7 +27,11 @@ data class Snapshot(
     val open: Map<Long, Int>,
     /** Text to show next to a target while it is busy or after it failed. */
     val status: Map<Long, String>,
-)
+    val mainBlind: Long?,
+) {
+    /** The chosen blind, or null if none is chosen or the gateway no longer has it. */
+    val main: Device? get() = blinds.firstOrNull { it.id == mainBlind }
+}
 
 class BlindsApp : Application() {
     /** Outlives any one widget tap or tile click, so a command still finishes when they go away. */
@@ -54,7 +58,7 @@ class Blinds(context: Context) {
     val store = Store(context)
 
     private val state = MutableStateFlow(
-        Snapshot(store.credentials != null, store.blinds, store.openPercent, emptyMap()),
+        Snapshot(store.credentials != null, store.blinds, store.openPercent, emptyMap(), store.mainBlind),
     )
     val snapshot: StateFlow<Snapshot> = state
 
@@ -71,7 +75,12 @@ class Blinds(context: Context) {
 
     fun logOut() {
         store.credentials = null
-        state.value = Snapshot(false, emptyList(), emptyMap(), emptyMap())
+        state.value = Snapshot(false, emptyList(), emptyMap(), emptyMap(), null)
+    }
+
+    fun chooseMainBlind(id: Long) {
+        store.mainBlind = id
+        state.update { it.copy(mainBlind = id) }
     }
 
     /** Returns an error message, or null when it worked. */
